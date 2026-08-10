@@ -59,6 +59,10 @@ Kiểm lại: `./hardening doctor ~/Documents/project/Anima-Engine`
 `cargo-mutants` vào một test suite flaky sẽ trộn "missed" với "nhiễu" — anh sẽ
 mất vài ngày mới nhận ra pipeline đang sinh task rác.
 
+> **Đã làm xong ngày 10/08/2026.** Phase −1 và mục 0.1 dưới đây đã chạy: cây git
+> đã sạch (nhánh `hardening/phase0-determinism`), kit đã cài và commit, baseline
+> đã chốt. Phần còn lại của Phase 0 — mục 0.3 và 0.4 — vẫn là việc phải làm.
+
 ### 0.1 Cài kit + chốt baseline
 
 ```bash
@@ -76,15 +80,22 @@ just baseline
 Điền cột Baseline vào bảng dưới **trước khi làm gì tiếp**. Số hiện đã biết từ
 khảo sát ngày 10/08:
 
+Baseline đã đo thật ngày 10/08/2026 (`baseline-2026-08-10.txt`, commit `00e96a5`):
+
 | Metric | Baseline | Target T+30d |
 |---|---|---|
+| src LOC / test LOC | **6.487 / 10.663** | — |
+| test (tất cả pass) | **175** | không giảm |
+| `#[ignore]` | **0** | 0 |
+| line coverage | **76,30%** | ≥ 80% (đã vượt mốc 70%) |
 | `thread_rng` trong src | **8** | 0 |
 | wall-clock trong src | **6** | 0 trong đường sim |
 | `unsafe` | **2** (`unsafe impl Send/Sync for BrainModel`) | không tăng |
-| test | **175** | không giảm |
-| `#[ignore]` | **0** | 0 |
-| flaky (20 lần) | ? | 20/20 |
-| mutation score | ? | ≥ 80% |
+| `HashMap`/`HashSet` | **35** chỗ | chỗ nào ảnh hưởng state → đổi sang có thứ tự |
+| clippy pedantic | **898** warning | ≤ 450 |
+| **mutant** | **2.002** | score ≥ 80% |
+| 1 lần `cargo test --release` | **88 giây** | — |
+| flaky (20 lần) | đang đo | 20/20 |
 | **bug thật trong FINDINGS.md** | **0** | **> 5** |
 
 Dòng cuối là dòng duy nhất thật sự quan trọng. Các dòng trên là proxy.
@@ -174,23 +185,25 @@ cd ~/Documents/project/Hardening && ./hardening init ~/Documents/project/Anima-E
 
 Đây là chỗ kế hoạch gốc chưa tính, và là rủi ro thực tế lớn nhất.
 
-```bash
-just baseline   # xem dòng mutants_total
-```
-
-Anima-Engine có 46 file test tích hợp; `cargo mutants` chạy **cả suite** cho
-**mỗi** mutant. Ước lượng thô:
+Số đã đo, không phải ước đoán: **2.002 mutant**, **88 giây** một lần
+`cargo test --release`. `cargo mutants` chạy *cả suite* cho *mỗi* mutant, và còn
+phải build lại lib mỗi lần:
 
 ```
-tổng giờ ≈ mutants_total × thời_gian_1_lần_cargo_test / jobs
+2002 × (88s test + ~40s build) / 6 job ≈ 12 giờ cho MỘT sweep đầy đủ
 ```
 
-Đo `thời_gian_1_lần` bằng `time just test`. Nếu ra > 6 giờ:
+Kết luận thực tế: **`just hunt` không dùng được như thao tác thường ngày.**
+Nó là việc chạy qua đêm, một lần, để có bản đồ tổng thể. Ngày thường dùng
+`just hunt-file` — quét một module mất vài phút thay vì nửa ngày.
 
-1. dùng `just hunt-file <file>` thay vì `just hunt` — quét từng module một
+Ba cách cắt chi phí:
+
+1. `just hunt-file <file>` cho công việc hằng ngày — đây là mặc định
 2. thêm `exclude_globs` vào `src-tauri/.cargo/mutants.toml`, **kèm lý do** cho
-   từng dòng
-3. chia sweep theo **ngày** bằng `just hunt 1` … `just hunt 5`
+   từng dòng. 2.002 mutant chắc chắn có phần đáng loại (IPC glue, code chỉ log)
+3. sweep đầy đủ thì chia theo **ngày**: `just hunt 1` … `just hunt 5`,
+   mỗi tối một shard ≈ 2,4 giờ
 
 **Không chạy 5 shard cùng lúc trên một máy.** Kế hoạch gốc nói chạy 5 agent song
 song mỗi agent một shard — trên i5-14600KF chúng tranh CPU của nhau và tổng thời
