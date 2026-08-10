@@ -1,20 +1,24 @@
 {
   "_ghi_chu": [
-    "Dán nội dung khối 'mcpServers' vào file cấu hình MCP của Antigravity",
-    "(Settings -> MCP Servers -> Edit config, hoặc ~/.antigravity/mcp_config.json).",
-    "Cùng file này dùng được cho Claude Code (~/.claude.json), Codex, Gemini CLI —",
-    "chỉ khác chỗ đặt. Server chỉ dùng thư viện chuẩn Python, không cần pip install.",
+    "Antigravity doc cau hinh MCP tai:  ~/.gemini/config/mcp_config.json",
+    "(khong phai ~/.antigravity — day la cho de nham). Them khoi 'hardening' vao",
+    "trong 'mcpServers' co san, dung ghi de ca file.",
+    "Cung noi dung nay dung duoc cho Claude Code (~/.claude.json), Codex, Gemini CLI.",
+    "Server chi dung thu vien chuan Python — khong can pip install.",
     "",
-    "HARDENING_REPO         = repo mặc định khi agent không truyền tham số 'repo'.",
-    "HARDENING_ALLOWED_ROOTS = hàng rào cứng. Bỏ trống = cho phép mọi nơi (KHÔNG nên).",
-    "                          Nhiều đường dẫn cách nhau bằng dấu ':'.",
-    "PATH                   = phải có ~/.cargo/bin, nếu không server không thấy",
-    "                          just / cargo / cargo-mutants."
+    "HARDENING_REPO          = repo mac dinh khi agent khong truyen tham so 'repo'.",
+    "HARDENING_ALLOWED_ROOTS = hang rao cung. Bo trong = cho phep moi noi (KHONG nen).",
+    "                          Nhieu duong dan cach nhau bang dau ':'.",
+    "PATH                    = BAT BUOC co ~/.cargo/bin. Antigravity khoi chay server",
+    "                          voi moi truong toi thieu, khong ke thua PATH cua shell,",
+    "                          nen thieu dong nay la server khong thay just/cargo."
   ],
   "mcpServers": {
     "hardening": {
       "command": "python3",
-      "args": ["/Users/duongnad/Documents/project/Hardening/mcp/server.py"],
+      "args": [
+        "/Users/duongnad/Documents/project/Hardening/mcp/server.py"
+      ],
       "env": {
         "HARDENING_REPO": "/Users/duongnad/Documents/project/Anima-Engine",
         "HARDENING_ALLOWED_ROOTS": "/Users/duongnad/Documents/project",

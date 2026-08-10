@@ -68,8 +68,14 @@ Gỡ ra: `./hardening uninstall <repo> [--yes]` (giữ lại `AGENTS.md`, `FINDI
 
 ## 4. Cắm vào Antigravity
 
-Copy khối `mcpServers` trong [antigravity-config.example.json](mcp/antigravity-config.example.json)
-vào cấu hình MCP của Antigravity. Sửa `HARDENING_REPO` cho đúng repo đang làm.
+Antigravity đọc cấu hình MCP tại **`~/.gemini/config/mcp_config.json`** (không
+phải `~/.antigravity`). Thêm khối `hardening` trong
+[antigravity-config.example.json](mcp/antigravity-config.example.json) vào
+`mcpServers` có sẵn, sửa `HARDENING_REPO` cho đúng repo đang làm.
+
+`PATH` trong khối `env` là bắt buộc: Antigravity khởi chạy server với môi trường
+tối thiểu, không kế thừa `PATH` của shell — thiếu `~/.cargo/bin` là server không
+thấy `just` và `cargo`.
 
 Kiểm tra server sống:
 
