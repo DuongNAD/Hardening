@@ -249,6 +249,22 @@ EOF
     esac
   fi
 
+  # --- artifact của kit không nên vào git; config của kit thì PHẢI vào git ---
+  if [ -f "$root/.gitignore" ]; then
+    grep -q '^# --- hardening kit ---' "$root/.gitignore" || cat >> "$root/.gitignore" <<'GI'
+
+# --- hardening kit ---
+logs/
+mutants.out/
+mutants.verify/
+.mutmut-cache
+# .hardening.env KHONG phai secret — no la config layout, moi script deu source
+# no. Quy tac '*.env' cua nhieu repo nuot mat file nay, nen phai go ra tuong minh.
+!.hardening.env
+GI
+    ok "  ~ .gitignore (bỏ qua artifact, giữ lại .hardening.env)"
+  fi
+
   # --- .agents/ hay bị gitignore → skill sẽ không được commit ---
   if [ -f "$root/.gitignore" ] && grep -qE '^\.agents/?$' "$root/.gitignore"; then
     warn ""
