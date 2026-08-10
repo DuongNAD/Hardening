@@ -1,0 +1,25 @@
+{
+  "_ghi_chu": [
+    "Dán nội dung khối 'mcpServers' vào file cấu hình MCP của Antigravity",
+    "(Settings -> MCP Servers -> Edit config, hoặc ~/.antigravity/mcp_config.json).",
+    "Cùng file này dùng được cho Claude Code (~/.claude.json), Codex, Gemini CLI —",
+    "chỉ khác chỗ đặt. Server chỉ dùng thư viện chuẩn Python, không cần pip install.",
+    "",
+    "HARDENING_REPO         = repo mặc định khi agent không truyền tham số 'repo'.",
+    "HARDENING_ALLOWED_ROOTS = hàng rào cứng. Bỏ trống = cho phép mọi nơi (KHÔNG nên).",
+    "                          Nhiều đường dẫn cách nhau bằng dấu ':'.",
+    "PATH                   = phải có ~/.cargo/bin, nếu không server không thấy",
+    "                          just / cargo / cargo-mutants."
+  ],
+  "mcpServers": {
+    "hardening": {
+      "command": "python3",
+      "args": ["/Users/duongnad/Documents/project/Hardening/mcp/server.py"],
+      "env": {
+        "HARDENING_REPO": "/Users/duongnad/Documents/project/Anima-Engine",
+        "HARDENING_ALLOWED_ROOTS": "/Users/duongnad/Documents/project",
+        "PATH": "/Users/duongnad/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}

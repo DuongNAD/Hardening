@@ -1,0 +1,27 @@
+set shell := ["bash", "-uc"]
+set dotenv-filename := ".hardening.env"
+set dotenv-load := true
+
+# Giao diện lệnh duy nhất. Agent không được gọi cargo trực tiếp.
+default:
+    @just --list --unsorted
+
+# Chốt số đo gốc. LÀM TRƯỚC MỌI THỨ.
+baseline:
+    ./scripts/baseline.sh | tee "baseline-$(date +%F).txt"
+
+test:
+    cd "$HD_CRATE" && cargo test --release
+
+# CỔNG DUY NHẤT. Không thấy "QUA CONG" nghĩa là chưa xong.
+verify mutant="":
+    ./scripts/verify.sh "{{mutant}}"
+
+clippy:
+    cd "$HD_CRATE" && cargo clippy --all-targets -- -W clippy::pedantic
+
+cov:
+    cd "$HD_CRATE" && cargo llvm-cov --summary-only
+
+audit:
+    cd "$HD_CRATE" && cargo audit

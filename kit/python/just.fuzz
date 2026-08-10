@@ -1,0 +1,10 @@
+
+# ---------- fuzz (property-based) ----------
+fuzz target="" time="3600":
+    HYPOTHESIS_PROFILE=soak python3 -m pytest -q "$HD_TEST" -k "{{target}}"
+
+crashes:
+    @ls -1 .hypothesis/examples 2>/dev/null | head -50 || echo "khong co"
+
+nightly:
+    -just fuzz "" 14400 2>&1 | tee "logs/fuzz-$(date +%F).log"

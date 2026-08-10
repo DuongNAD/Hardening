@@ -1,0 +1,21 @@
+
+# ---------- fuzz + miri (chạy nền, 0 token) ----------
+# Miri chỉ chạy được code Rust thuần, không FFI. Lọc hẹp, đừng chạy cả suite.
+miri filter="":
+    cd "$HD_CRATE" && MIRIFLAGS="-Zmiri-disable-isolation" cargo +nightly miri test --lib {{filter}}
+
+fuzz target time="3600":
+    cd "$HD_CRATE" && cargo +nightly fuzz run {{target}} -- -max_total_time={{time}}
+
+fuzz-list:
+    @ls "$HD_CRATE/fuzz/fuzz_targets" 2>/dev/null || echo "chua co fuzz target — chay 'cargo fuzz init' trong $HD_CRATE"
+
+# Danh sách crash chưa triage.
+crashes:
+    @ls -1 "$HD_CRATE"/fuzz/artifacts/*/* 2>/dev/null || echo "khong co crash"
+
+# Gắn vào Scheduled Task của Antigravity, 02:00 hằng đêm.
+nightly time="14400":
+    -just miri 2>&1 | tee "logs/miri-$(date +%F).log"
+    -for t in $(ls "$HD_CRATE/fuzz/fuzz_targets" 2>/dev/null | sed 's/\.rs$//'); do \
+        just fuzz "$t" {{time}} 2>&1 | tee "logs/fuzz-$t-$(date +%F).log"; done

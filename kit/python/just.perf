@@ -1,0 +1,10 @@
+
+# ---------- perf ----------
+bench-baseline:
+    python3 -m pytest "$HD_TEST" --benchmark-only --benchmark-save=base
+
+bench-compare:
+    python3 -m pytest "$HD_TEST" --benchmark-only --benchmark-compare=base
+
+perf-gate:
+    ./scripts/perf_gate.sh

@@ -1,0 +1,8 @@
+
+# ---------- dataflow ----------
+# import-linter là oracle gần như hoàn hảo cho pipeline FastAPI/service layer.
+dataflow-truth:
+    python3 -m importlinter.cli lint --show-timings > dataflow-truth.txt || true
+
+dataflow-verify:
+    python3 -m importlinter.cli lint

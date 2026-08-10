@@ -1,0 +1,9 @@
+
+# ---------- dataflow ----------
+# Agent xuất dataflow.json, script đối chiếu với cargo-modules. Không có oracle
+# thì "phân tích luồng dữ liệu" chỉ là văn xuôi đẹp — đây là oracle.
+dataflow-truth:
+    cd "$HD_CRATE" && cargo modules dependencies --lib --no-externs > ../dataflow-truth.dot
+
+dataflow-verify:
+    python3 scripts/verify_dataflow.py dataflow.json dataflow-truth.dot

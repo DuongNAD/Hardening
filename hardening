@@ -1,0 +1,314 @@
+#!/usr/bin/env bash
+# hardening — cài bộ khung verifier vào BẤT KỲ repo nào.
+# Triết lý: model SINH, chương trình PHÁN. Mọi module cài vào đều phải
+# cung cấp ít nhất một lệnh trả exit code.
+set -euo pipefail
+
+KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERSION="1.0"
+
+MODULES_ALL="determinism mutation fuzz dataflow perf"
+mod_desc() {
+  case "$1" in
+    determinism) echo "Cong flaky + audit RNG/dong ho + golden hash. NEN TANG, cai truoc.";;
+    mutation)    echo "Vong lap giet mutant + cong chong gian lan. Khoi luong chinh cua agent.";;
+    fuzz)        echo "Fuzz + Miri/sanitizer chay nen ban dem. 0 token, hay ra bug nang nhat.";;
+    dataflow)    echo "Agent xuat mo hinh luong du lieu, script doi chieu voi cong cu that.";;
+    perf)        echo "Baseline benchmark, tu revert toi uu khong dat y nghia thong ke.";;
+  esac
+}
+mod_skill() {
+  case "$1" in
+    determinism) echo determinism-fixer;; mutation) echo mutant-killer;;
+    fuzz)        echo crash-triage;;      dataflow) echo dataflow-audit;;
+    perf)        echo perf-guard;;
+  esac
+}
+
+say()  { printf '%s\n' "$*"; }
+err()  { printf '\033[31m%s\033[0m\n' "$*" >&2; }
+ok()   { printf '\033[32m%s\033[0m\n' "$*"; }
+warn() { printf '\033[33m%s\033[0m\n' "$*"; }
+
+# `ls a b c` tra loi neu THIEU BAT KY cai nao — dung no de "co it nhat mot"
+# la sai, va sai am tham. Kiem tung cai.
+has_any() { local r="$1"; shift; for f in "$@"; do [ -f "$r/$f" ] && return 0; done; return 1; }
+
+# ---------------------------------------------------------------- detect
+detect() {
+  local root="$1" lang="" src="" tests="" crate="."
+
+  # Ứng viên crate Rust: bỏ playground/examples/node_modules/target, chọn cái
+  # có nhiều .rs nhất. Repo thật hay có nhiều Cargo.toml rác — chọn nhầm là
+  # cài cả bộ khung lên đúng thư mục đồ chơi.
+  local best="" best_n=-1 c n d
+  while IFS= read -r c; do
+    [ -z "$c" ] && continue
+    case "$c" in
+      */playground/*|*/examples/*|*/node_modules/*|*/target/*|*/.agents/*) continue;;
+    esac
+    grep -q '^\[package\]' "$c" 2>/dev/null || continue
+    d=$(dirname "$c")
+    n=$(find "$d/src" -name '*.rs' 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$n" -gt "$best_n" ]; then best_n="$n"; best="$d"; fi
+  done <<EOF
+$(find "$root" -maxdepth 3 -name Cargo.toml 2>/dev/null)
+EOF
+
+  if [ -n "$best" ]; then
+    crate="${best#$root/}"; [ "$crate" = "$root" ] && crate="."
+    lang=rust; src="src"; tests="tests"
+  elif has_any "$root" pyproject.toml setup.py setup.cfg requirements.txt \
+                       conftest.py pytest.ini tox.ini \
+       || [ -n "$(find "$root" -maxdepth 1 -name '*.py' 2>/dev/null | head -1)" ]; then
+    lang=python; crate="."
+    tests=$( [ -d "$root/tests" ] && echo tests || echo test )
+    if [ -d "$root/src" ]; then
+      src=src
+    else
+      # Không có src/ -> chọn package có nhiều .py nhất, bỏ tests và thư mục rác.
+      src=$(for d in "$root"/*/; do
+              b=$(basename "$d")
+              case "$b" in (tests|test|docs|node_modules|__pycache__|.*) continue;; esac
+              [ -f "$d/__init__.py" ] || [ -n "$(find "$d" -maxdepth 2 -name '*.py' 2>/dev/null|head -1)" ] || continue
+              printf '%s %s\n' "$(find "$d" -name '*.py' 2>/dev/null|wc -l|tr -d ' ')" "$b"
+            done | sort -rn | head -1 | awk '{print $2}')
+      [ -z "$src" ] && src="."
+    fi
+  else
+    err "Khong nhan ra ngon ngu. Ho tro: Rust (Cargo.toml), Python (pyproject/setup.py)."
+    return 1
+  fi
+
+  printf 'HD_LANG=%s\nHD_CRATE=%s\nHD_SRC=%s\nHD_TEST=%s\n' "$lang" "$crate" "$src" "$tests"
+}
+
+cmd_detect() {
+  local root="${1:-$PWD}"; root=$(cd "$root" && pwd)
+  say "repo: $root"
+  detect "$root"
+  local d; d=$(detect "$root"); eval "$d"
+  say "---"
+  if [ "$HD_LANG" = rust ]; then
+    say "package : $(grep -m1 '^name' "$root/$HD_CRATE/Cargo.toml" | cut -d'"' -f2)"
+    say "src loc : $(find "$root/$HD_CRATE/$HD_SRC" -name '*.rs' 2>/dev/null | xargs cat 2>/dev/null | wc -l | tr -d ' ')"
+    say "tests   : $(grep -rhoE '#\[(tokio::)?test\]' "$root/$HD_CRATE" --include='*.rs' 2>/dev/null | wc -l | tr -d ' ')"
+    say "rng bẩn : $(grep -rc 'thread_rng' "$root/$HD_CRATE/$HD_SRC" --include='*.rs' 2>/dev/null | awk -F: '{s+=$2} END{print s+0}') chỗ dùng thread_rng"
+    say "đồng hồ : $(grep -rcE '(SystemTime|Instant)::now' "$root/$HD_CRATE/$HD_SRC" --include='*.rs' 2>/dev/null | awk -F: '{s+=$2} END{print s+0}') chỗ đọc wall-clock"
+    say "unsafe  : $(grep -rc 'unsafe' "$root/$HD_CRATE/$HD_SRC" --include='*.rs' 2>/dev/null | awk -F: '{s+=$2} END{print s+0}')"
+  else
+    say "src loc : $(find "$root/$HD_SRC" -name '*.py' 2>/dev/null | xargs cat 2>/dev/null | wc -l | tr -d ' ')"
+    say "tests   : $(grep -rhoE '^def test_' "$root/$HD_TEST" --include='*.py' 2>/dev/null | wc -l | tr -d ' ')"
+    say "rng bẩn : $(grep -rcE 'random\.|np\.random\.(rand|seed)?' "$root/$HD_SRC" --include='*.py' 2>/dev/null | awk -F: '{s+=$2} END{print s+0}')"
+  fi
+}
+
+# ---------------------------------------------------------------- doctor
+cmd_doctor() {
+  local root="${1:-$PWD}"; root=$(cd "$root" && pwd)
+  local d; d=$(detect "$root") || return 1; eval "$d"
+  say "ngôn ngữ: $HD_LANG   crate: $HD_CRATE"
+  say ""
+  local missing=()
+  check() { if command -v "$1" >/dev/null 2>&1; then ok "  ✓ $1"; else warn "  ✗ $1   ($2)"; missing+=("$2"); fi; }
+
+  say "công cụ chung:"
+  check just "brew install just"
+  check git "—"
+  say ""
+  if [ "$HD_LANG" = rust ]; then
+    say "rust:"
+    check cargo "rustup"
+    for t in cargo-mutants cargo-llvm-cov cargo-fuzz cargo-modules critcmp cargo-audit; do
+      if cargo "${t#cargo-}" --version >/dev/null 2>&1 || command -v "$t" >/dev/null 2>&1; then
+        ok "  ✓ $t"; else warn "  ✗ $t   (cargo install $t)"; missing+=("cargo install $t"); fi
+    done
+    if rustup toolchain list 2>/dev/null | grep -q nightly; then ok "  ✓ nightly"; else
+      warn "  ✗ nightly   (rustup toolchain install nightly)"; missing+=("rustup toolchain install nightly"); fi
+  else
+    say "python:"
+    check python3 "pyenv/brew"
+    for m in pytest mutmut hypothesis; do
+      if python3 -c "import ${m//-/_}" 2>/dev/null; then ok "  ✓ $m"; else warn "  ✗ $m   (pip install $m)"; missing+=("pip install $m"); fi
+    done
+  fi
+  say ""
+  if [ ${#missing[@]} -eq 0 ]; then ok "đủ công cụ."; else
+    warn "thiếu ${#missing[@]} thứ. Cài:"; printf '  %s\n' "${missing[@]}" | sort -u; fi
+}
+
+# ---------------------------------------------------------------- modules
+cmd_modules() {
+  say "Các chức năng có thể cài (chọn bao nhiêu cũng được):"
+  say ""
+  for m in $MODULES_ALL; do
+    printf '  \033[1m%-13s\033[0m %s\n' "$m" "$(mod_desc "$m")"
+  done
+  say ""
+  say "Gợi ý: lần đầu chỉ cài  determinism  → chạy ổn rồi mới thêm  mutation."
+}
+
+pick_modules() {
+  local chosen=()
+  say "" >&2
+  say "Chọn chức năng (nhập số, cách nhau bởi dấu cách; Enter = 1 2):" >&2
+  local i=1; local arr=()
+  for m in $MODULES_ALL; do
+    printf '  %d) %-13s %s\n' "$i" "$m" "$(mod_desc "$m")" >&2
+    arr+=("$m"); i=$((i+1))
+  done
+  printf '> ' >&2; read -r line </dev/tty || line=""
+  [ -z "${line// }" ] && line="1 2"
+  for n in $line; do
+    [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -ge 1 ] && [ "$n" -le ${#arr[@]} ] && chosen+=("${arr[$((n-1))]}")
+  done
+  printf '%s' "${chosen[*]}"
+}
+
+# ---------------------------------------------------------------- init
+cmd_init() {
+  local root="${1:-$PWD}"; shift || true
+  root=$(cd "$root" && pwd)
+  local modules="" force=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --modules) modules="${2//,/ }"; shift 2;;
+      --all) modules="$MODULES_ALL"; shift;;
+      --force) force=1; shift;;
+      *) err "tham số lạ: $1"; return 1;;
+    esac
+  done
+
+  local d; d=$(detect "$root") || return 1; eval "$d"
+  say "repo     : $root"
+  say "ngôn ngữ : $HD_LANG    crate: $HD_CRATE    src: $HD_SRC    test: $HD_TEST"
+
+  [ -z "$modules" ] && modules=$(pick_modules)
+  [ -z "${modules// }" ] && { err "không chọn chức năng nào."; return 1; }
+  # determinism là nền của mọi thứ khác
+  case " $modules " in *" determinism "*) :;; *) modules="determinism $modules"; warn "→ tự thêm 'determinism' (bắt buộc làm nền)";; esac
+
+  say "chức năng: $modules"
+  say ""
+
+  local L="$KIT/kit/$HD_LANG"
+  mkdir -p "$root/scripts" "$root/.agents/skills" "$root/logs"
+
+  # --- config: mọi script đọc từ đây, không hardcode gì ---
+  cat > "$root/.hardening.env" <<EOF
+# sinh bởi hardening v$VERSION — $(date -u +%F)
+HD_LANG=$HD_LANG
+HD_CRATE=$HD_CRATE
+HD_SRC=$HD_SRC
+HD_TEST=$HD_TEST
+HD_MODULES="$modules"
+HD_SEED=0x5EED
+EOF
+  ok "  + .hardening.env"
+
+  # --- justfile: ghép từ core + từng module ---
+  { cat "$L/just.core"
+    for m in $modules; do [ -f "$L/just.$m" ] && cat "$L/just.$m"; done
+  } > "$root/justfile"
+  ok "  + justfile ($(wc -l < "$root/justfile" | tr -d ' ') dòng)"
+
+  # --- scripts ---
+  for f in "$L/scripts"/*; do
+    [ -e "$f" ] || continue
+    cp "$f" "$root/scripts/"; ok "  + scripts/$(basename "$f")"
+  done
+  chmod +x "$root/scripts"/*.sh 2>/dev/null || true
+
+  # --- skills: chỉ cái module cần ---
+  for m in $modules; do
+    local s; s=$(mod_skill "$m")
+    [ -z "$s" ] && continue
+    [ -d "$KIT/kit/skills/$s" ] || continue
+    cp -R "$KIT/kit/skills/$s" "$root/.agents/skills/"
+    ok "  + .agents/skills/$s/"
+  done
+  # cùng skill dùng chung cho Claude Code
+  mkdir -p "$root/.claude"
+  [ -e "$root/.claude/skills" ] || ln -s "../.agents/skills" "$root/.claude/skills" 2>/dev/null || true
+
+  # --- luật + sổ bug ---
+  sed -e "s|@CRATE@|$HD_CRATE|g" -e "s|@SRC@|$HD_SRC|g" -e "s|@TEST@|$HD_TEST|g" \
+      -e "s|@LANG@|$HD_LANG|g" "$KIT/kit/common/AGENTS.md.tmpl" > "$root/AGENTS.md.new"
+  if [ -f "$root/AGENTS.md" ] && [ "$force" -eq 0 ]; then
+    warn "  ! AGENTS.md đã có → ghi ra AGENTS.md.new, tự merge"
+  else
+    mv "$root/AGENTS.md.new" "$root/AGENTS.md"; ok "  + AGENTS.md"
+  fi
+  [ -f "$root/FINDINGS.md" ] || { cp "$KIT/kit/common/FINDINGS.md" "$root/"; ok "  + FINDINGS.md"; }
+
+  # --- config riêng của công cụ ---
+  if [ "$HD_LANG" = rust ]; then
+    case " $modules " in *" mutation "*)
+      mkdir -p "$root/$HD_CRATE/.cargo"
+      [ -f "$root/$HD_CRATE/.cargo/mutants.toml" ] || { cp "$L/mutants.toml" "$root/$HD_CRATE/.cargo/"; ok "  + $HD_CRATE/.cargo/mutants.toml"; };;
+    esac
+  fi
+
+  # --- .agents/ hay bị gitignore → skill sẽ không được commit ---
+  if [ -f "$root/.gitignore" ] && grep -qE '^\.agents/?$' "$root/.gitignore"; then
+    warn ""
+    warn "  ! .gitignore đang bỏ qua .agents/ → skill sẽ KHÔNG được commit."
+    warn "    Sửa dòng '.agents/' thành hai dòng:"
+    warn "        .agents/*"
+    warn "        !.agents/skills/"
+  fi
+
+  say ""
+  ok "xong. Bước tiếp theo:"
+  say "  cd $root"
+  say "  just            # xem lệnh có sẵn"
+  say "  just baseline    # chốt số đo gốc — LÀM TRƯỚC MỌI THỨ"
+  say "  just flaky       # cổng ra Phase 0, phải 20/20"
+}
+
+cmd_uninstall() {
+  local root="${1:-$PWD}"; shift || true
+  root=$(cd "$root" && pwd)
+  local yes=0
+  [ "${1:-}" = "--yes" ] && yes=1
+  say "sẽ xoá khỏi $root:"
+  local targets=(justfile .hardening.env scripts/verify.sh scripts/baseline.sh
+                 scripts/flaky_check.sh scripts/perf_gate.sh scripts/verify_dataflow.py
+                 .agents/skills .claude/skills)
+  for t in "${targets[@]}"; do [ -e "$root/$t" ] && say "  - $t"; done
+  say "(AGENTS.md và FINDINGS.md giữ lại)"
+  if [ "$yes" -eq 0 ]; then
+    printf 'xác nhận? [y/N] '
+    read -r a </dev/tty 2>/dev/null || { err "không có terminal — dùng: hardening uninstall <repo> --yes"; return 1; }
+    [ "$a" = y ] || { say "huỷ."; return 0; }
+  fi
+  for t in "${targets[@]}"; do rm -rf "${root:?}/$t"; done
+  ok "đã gỡ."
+}
+
+usage() {
+  cat <<EOF
+hardening v$VERSION — bộ khung verifier cho agent, dùng với mọi repo
+
+  hardening detect  [repo]              nhận diện layout + số đo nhanh
+  hardening doctor  [repo]              kiểm tra công cụ còn thiếu
+  hardening modules                     liệt kê các chức năng
+  hardening init    [repo] [--modules a,b | --all] [--force]
+  hardening uninstall [repo] [--yes]
+
+Ví dụ:
+  hardening detect ~/Documents/project/Anima-Engine
+  hardening init   ~/Documents/project/Anima-Engine --modules determinism,mutation
+  hardening init   ~/Documents/project/Genius --all
+EOF
+}
+
+case "${1:-}" in
+  detect)    shift; cmd_detect "$@";;
+  doctor)    shift; cmd_doctor "$@";;
+  modules)   shift; cmd_modules "$@";;
+  init)      shift; cmd_init "$@";;
+  uninstall) shift; cmd_uninstall "$@";;
+  ""|-h|--help|help) usage;;
+  *) err "lệnh lạ: $1"; usage; exit 1;;
+esac

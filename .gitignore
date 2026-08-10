@@ -1,0 +1,8 @@
+# Bộ kit này KHÔNG sinh artifact — mọi thứ ở đây là source.
+# Chỉ chặn rác của hệ điều hành và của lần chạy thử.
+.DS_Store
+__pycache__/
+*.pyc
+sandbox/
+pysbx/
+*.log

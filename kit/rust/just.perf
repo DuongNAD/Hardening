@@ -1,0 +1,12 @@
+
+# ---------- perf ----------
+# CẢNH BÁO: đây là module DUY NHẤT agent được sửa src/. Chạy trên nhánh riêng.
+bench-baseline:
+    cd "$HD_CRATE" && cargo bench -- --save-baseline base
+
+bench-compare:
+    cd "$HD_CRATE" && cargo bench -- --baseline base
+
+# Gate: chỉ giữ tối ưu nếu vượt ngưỡng ý nghĩa thống kê, ngược lại revert.
+perf-gate:
+    ./scripts/perf_gate.sh

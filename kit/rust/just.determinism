@@ -1,0 +1,13 @@
+
+# ---------- determinism ----------
+# Cổng ra Phase 0. Phải n/n pass mới được sang mutation.
+flaky n="20":
+    ./scripts/flaky_check.sh {{n}}
+
+# Liệt kê mọi nguồn phi tất định còn lại trong src.
+seed-audit:
+    @grep -rnE 'thread_rng|rand::random|SystemTime::now|Instant::now' "$HD_CRATE/$HD_SRC" --include='*.rs' || echo "sach"
+
+# Chạy riêng golden test tất định.
+determinism:
+    cd "$HD_CRATE" && cargo test --release determinism -- --nocapture

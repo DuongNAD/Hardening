@@ -1,0 +1,12 @@
+
+# ---------- determinism ----------
+flaky n="20":
+    ./scripts/flaky_check.sh {{n}}
+
+# pytest-randomly đảo thứ tự test -> lộ phụ thuộc thứ tự.
+order-check:
+    @python3 -c "import pytest_randomly" 2>/dev/null || echo "CANH BAO: chua co pytest-randomly -> khong bat duoc phu thuoc thu tu test (pip install pytest-randomly)"
+    python3 -m pytest -q "$HD_TEST"
+
+seed-audit:
+    @grep -rnE 'random\.(random|randint|choice|shuffle)|np\.random\.|time\.time\(\)|datetime\.now\(\)' "$HD_SRC" --include='*.py' || echo "sach"

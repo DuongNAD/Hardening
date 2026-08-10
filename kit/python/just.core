@@ -1,0 +1,22 @@
+set shell := ["bash", "-uc"]
+set dotenv-filename := ".hardening.env"
+set dotenv-load := true
+
+default:
+    @just --list --unsorted
+
+baseline:
+    ./scripts/baseline.sh | tee "baseline-$(date +%F).txt"
+
+test:
+    python3 -m pytest -q "$HD_TEST"
+
+# CỔNG DUY NHẤT. Không thấy "QUA CONG" nghĩa là chưa xong.
+verify target="":
+    ./scripts/verify.sh "{{target}}"
+
+lint:
+    python3 -m ruff check "$HD_SRC" || true
+
+cov:
+    python3 -m pytest --cov="$HD_SRC" --cov-report=term-missing -q "$HD_TEST"

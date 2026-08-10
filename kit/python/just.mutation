@@ -1,0 +1,13 @@
+
+# ---------- mutation ----------
+hunt path="":
+    -python3 -m mutmut run --paths-to-mutate "${HD_SRC}{{path}}"
+
+list-missed:
+    @python3 -m mutmut result-ids survived 2>/dev/null || echo "chua co ket qua — chay 'just hunt' truoc"
+
+show id:
+    python3 -m mutmut show {{id}}
+
+mutation-score:
+    @python3 -m mutmut results 2>/dev/null | tail -20
