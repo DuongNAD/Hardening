@@ -1,11 +1,16 @@
 
 # ---------- perf ----------
 # CẢNH BÁO: đây là module DUY NHẤT agent được sửa src/. Chạy trên nhánh riêng.
+#
+# `--benches` là bắt buộc, không phải tuỳ chọn. Thiếu nó thì `cargo bench --` đẩy
+# cờ của criterion vào CẢ harness libtest mặc định (unittest trong src/), mà nó
+# không hiểu `--save-baseline` và làm hỏng cả lượt đo:
+#     error: Unrecognized option: 'save-baseline'
 bench-baseline:
-    cd "$HD_CRATE" && cargo bench -- --save-baseline base
+    cd "$HD_CRATE" && cargo bench --benches -- --save-baseline base
 
 bench-compare:
-    cd "$HD_CRATE" && cargo bench -- --baseline base
+    cd "$HD_CRATE" && cargo bench --benches -- --baseline base
 
 # Gate: chỉ giữ tối ưu nếu vượt ngưỡng ý nghĩa thống kê, ngược lại revert.
 perf-gate:

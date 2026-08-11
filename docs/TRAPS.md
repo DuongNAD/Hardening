@@ -336,6 +336,61 @@ server với môi trường tối thiểu, không kế thừa `PATH` của shell
 
 ---
 
+## criterion / cargo-fuzz
+
+### `error: Unrecognized option: 'save-baseline'`
+
+`cargo bench -- --save-baseline base` hỏng dù đã có `[[bench]] harness = false`.
+
+**Nguyên nhân:** cargo coi **mọi** target có harness mặc định là bench target, và
+đẩy cờ của criterion vào tất cả. Lỗi đến từ `[lib]` và `[[bin]]`, không phải từ
+bench của anh. Thông báo có gợi ý chính xác: `to rerun pass --lib` rồi
+`to rerun pass --bin <ten>`.
+
+**Sửa:** tắt harness ở **cả lib và mọi bin**, không chỉ một chỗ:
+
+```toml
+[lib]
+bench = false
+
+[[bin]]
+name = "ten-bin"
+path = "src/main.rs"
+bench = false
+```
+
+`--benches` trên dòng lệnh **không** đủ.
+
+---
+
+### `cargo fuzz build` hỏng trên crate Tauri
+
+```
+error[E0063]: missing field `referenced_by` in initializer of `ResolvedCommand`
+  --> src/lib.rs: .run(tauri::generate_context!())
+```
+
+**Nguyên nhân:** `generate_context!` cần toàn bộ pipeline build của Tauri, mà
+build của cargo-fuzz không cung cấp.
+
+Điều đáng lưu: `cargo +nightly check --lib` **thành công**. Chỉ build của
+cargo-fuzz mới hỏng, nên dễ đổ nhầm cho nightly.
+
+Cũng đừng đổ cho lệch phiên bản: `fuzz/` có lockfile độc lập và thật sự chọn
+tauri khác (2.11.5 so với 2.11.2), nhưng ép nó dùng đúng lock của crate chính
+**vẫn hỏng**. Nguyên nhân là kiến trúc, không phải pin.
+
+**Không sửa được bằng cấu hình.** Phải tách logic thuần ra crate riêng không phụ
+thuộc Tauri. Cùng nguyên nhân này khiến Miri không dùng được — hai lớp công cụ
+tìm bug mạnh nhất bị chặn bởi một quyết định kiến trúc.
+
+**Trong lúc chưa tách:** giả thuyết mà fuzz định kiểm vẫn kiểm được bằng tay. Viết
+một test thăm dò in ra hành vi ở biên (`NaN`, `±inf`, giá trị cực lớn) rồi đọc
+kết quả. Cách này tìm ra F-006 trên Anima-Engine — `NaN` bị nuốt vào ô (0,0) im
+lặng.
+
+---
+
 ## Bash trên macOS
 
 macOS ship **bash 3.2** (2007). Script viết cho bash 4+ chết ngay dòng đầu.

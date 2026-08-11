@@ -32,7 +32,8 @@ Chất lượng = sức mạnh verifier × k (số lần thử) ÷ độ dài ho
 | vòng lặp agent | ✅ **đã chứng minh** — Antigravity Agent Manager đi trọn vòng, chờ cổng 5 phút, qua thật |
 | runner headless | ⚠️ `agy -p` chỉ một lượt, không lặp được. `claude -p` thì lặp được. |
 | module `dataflow` | ✅ chạy thật trên `cargo-modules`, 5 đường từ chối đã kiểm |
-| module `fuzz` / `perf` | ⚠️ có script, chưa chạy — chưa có fuzz target và benchmark nào |
+| module `perf` | ✅ chạy thật, cổng tự revert khi tối ưu không thắng |
+| module `fuzz` | ⚠️ **bị chặn** trên crate Tauri — xem TRAPS. Miri cùng nguyên nhân. |
 
 Ba lượt agent thật, ba hành vi khác nhau — cùng model, cùng prompt:
 
