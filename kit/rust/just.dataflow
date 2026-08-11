@@ -2,8 +2,15 @@
 # ---------- dataflow ----------
 # Agent xuất dataflow.json, script đối chiếu với cargo-modules. Không có oracle
 # thì "phân tích luồng dữ liệu" chỉ là văn xuôi đẹp — đây là oracle.
+#
+# Đo trên repo thật: đồ thị thô có 788 cạnh. Lọc bỏ "owns" (phân cấp module,
+# không phải luồng dữ liệu) rồi gộp về mức module còn 11. 788 thì không agent
+# nào liệt kê nổi; bắt liệt kê đủ là ra task bất khả thi. Việc lọc nằm trong
+# scripts/verify_dataflow.py.
 dataflow-truth:
     cd "$HD_CRATE" && cargo modules dependencies --lib --no-externs > ../dataflow-truth.dot
+    @echo "canh 'uses' muc module: $(python3 scripts/verify_dataflow.py --count dataflow-truth.dot 2>/dev/null || echo '(chay dataflow-verify de xem)')"
 
-dataflow-verify:
-    python3 scripts/verify_dataflow.py dataflow.json dataflow-truth.dot
+# depth=1 -> so sánh ở mức "core", "ai". depth=2 -> "core::ecs".
+dataflow-verify depth="1":
+    python3 scripts/verify_dataflow.py dataflow.json dataflow-truth.dot {{depth}}

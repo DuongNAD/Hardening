@@ -31,7 +31,8 @@ Chất lượng = sức mạnh verifier × k (số lần thử) ÷ độ dài ho
 | module `mutation` | ✅ `map_elites.rs` **100%**, 3 mutant đã giết và qua cổng thật |
 | vòng lặp agent | ✅ **đã chứng minh** — Antigravity Agent Manager đi trọn vòng, chờ cổng 5 phút, qua thật |
 | runner headless | ⚠️ `agy -p` chỉ một lượt, không lặp được. `claude -p` thì lặp được. |
-| module `fuzz` / `perf` / `dataflow` | ⚠️ có script, chưa chạy trên repo thật |
+| module `dataflow` | ✅ chạy thật trên `cargo-modules`, 5 đường từ chối đã kiểm |
+| module `fuzz` / `perf` | ⚠️ có script, chưa chạy — chưa có fuzz target và benchmark nào |
 
 Ba lượt agent thật, ba hành vi khác nhau — cùng model, cùng prompt:
 
