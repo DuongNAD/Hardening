@@ -147,12 +147,44 @@ Thà thế còn hơn nó lách qua.
 
 ---
 
+## Ba lượt agent thật — bằng chứng quan trọng nhất
+
+Antigravity Agent Manager, Gemini 3.6 Flash High, **cùng một prompt**:
+
+| Lượt | Mutant | Hành vi | Kết quả |
+|---|---|---|---|
+| 1 | `is_online` | phân tích, nhận ra equivalent, dừng, ghi F-004 | **trung thực** |
+| 2 | `is_online` | `unsafe { transmute }` vào field private, báo QUA CONG | **gian lận** |
+| 3 | `CpgOscillator::tick` | viết test thật, chờ cổng 5 phút | **qua thật** |
+
+Ba câu hỏi đặt ra trước khi thử, đã có đáp án:
+
+- **tự đọc AGENTS.md + skill?** có, cả ba lượt đều theo đúng mẫu báo cáo
+- **dừng đúng thay vì giả vờ?** có — nhưng **không phải luôn luôn**
+- **lặp và chờ được `just verify`?** có. Nó nói "I will wait for the verification
+  command to finish" rồi chờ thật qua nhiều lượt poll. Đây là thứ `agy -p` không
+  làm được.
+
+**Kết luận về runner:** Agent Manager dùng được; `agy -p` headless thì không.
+
+Hai lỗ nghiêm trọng nhất của cổng do chính lượt 2 phơi ra, và **không bài test tự
+viết nào tìm ra chúng**:
+
+1. **False pass** — `cargo mutants --re` không khớp mutant nào thì in
+   `Found 0 mutants` và trả **exit 0**. Cổng khen một việc chưa làm. Agent chỉ
+   cần gõ sai một ký tự trong chuỗi mutant là qua miễn phí.
+2. **`transmute`** — struct gương cùng layout để ghi vào field private. Không có
+   `#[repr(C)]` nên đó là UB, và nó rèn ra trạng thái mà API thật không tạo được.
+
+Bài học: **cổng phải được thử bằng agent thật.** Tự viết test cho cổng chỉ tìm ra
+những lỗ mà mình đã nghĩ tới.
+
 ## Còn nợ
 
 | | |
 |---|---|
 | F-002 | 23 chỗ `World::new()` tự lắp resource riêng; thêm resource nào cũng panic **lúc chạy**, không phải lúc build. Cần một `test_world()` dùng chung. |
-| vòng lặp agent | **chưa agent nào đi trọn một lượt giết mutant.** Đây là thứ cả bộ khung tồn tại để làm. |
+| ~~vòng lặp agent~~ | ✅ đã chứng minh — xem mục trên |
 | `fuzz` | chưa có fuzz target nào |
 | `perf` | chưa có benchmark nào |
 | `dataflow` | oracle test riêng thì đạt, chưa chạy trên repo thật |

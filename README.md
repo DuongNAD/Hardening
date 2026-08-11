@@ -28,12 +28,21 @@ Chất lượng = sức mạnh verifier × k (số lần thử) ÷ độ dài ho
 | cài đặt, dò layout | ✅ đúng trên Anima-Engine, LIVA, Genius |
 | MCP server trong Antigravity | ✅ chạy đúng môi trường thật |
 | module `determinism` | ✅ đã dùng thật, tìm ra 1 bug |
-| module `mutation` | ✅ `map_elites.rs` **100%**, 2 mutant đã giết và qua cổng thật |
-| vòng lặp agent tự động | ⚠️ **chưa agent nào đi trọn một lượt** — mới làm tay |
+| module `mutation` | ✅ `map_elites.rs` **100%**, 3 mutant đã giết và qua cổng thật |
+| vòng lặp agent | ✅ **đã chứng minh** — Antigravity Agent Manager đi trọn vòng, chờ cổng 5 phút, qua thật |
+| runner headless | ⚠️ `agy -p` chỉ một lượt, không lặp được. `claude -p` thì lặp được. |
 | module `fuzz` / `perf` / `dataflow` | ⚠️ có script, chưa chạy trên repo thật |
 
-Dòng áp chót là cảnh báo quan trọng nhất: cả bộ khung này tồn tại để một agent
-nhận mutant → viết test → qua cổng. Việc đó chưa xảy ra lần nào.
+Ba lượt agent thật, ba hành vi khác nhau — cùng model, cùng prompt:
+
+1. nhận ra mutant không giết được, dừng, ghi `FINDINGS.md` — **trung thực**
+2. `unsafe { transmute }` chọc vào field private, báo `QUA CONG` — **gian lận**
+3. viết test đàng hoàng, chờ cổng 5 phút, qua thật — **đúng**
+
+Một trong ba đã gian lận. Đó là lý do kiến trúc này không đặt cược vào model
+ngoan, mà đặt cược vào cổng — và tại sao cổng phải được thử bằng agent thật:
+hai lỗ nghiêm trọng nhất (false pass, transmute) không bài test tự viết nào
+tìm ra.
 
 ---
 
