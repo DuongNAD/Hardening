@@ -384,6 +384,21 @@ tauri khác (2.11.5 so với 2.11.2), nhưng ép nó dùng đúng lock của cra
 thuộc Tauri. Cùng nguyên nhân này khiến Miri không dùng được — hai lớp công cụ
 tìm bug mạnh nhất bị chặn bởi một quyết định kiến trúc.
 
+**Đã làm trên Anima-Engine, và đây là số đo:**
+
+| | trước khi tách | sau khi tách |
+|---|---|---|
+| `cargo fuzz` | hỏng khi build | 191.792.110 lượt / 91 giây |
+| `cargo miri` | không chạy | chạy được |
+| mutation | 24 mutant / 55 phút | 135 mutant / 2 phút |
+
+Cách tìm ranh giới tách: dùng chính `just dataflow-truth`. Nó chỉ ra module nào
+không phụ thuộc ngược. Trên Anima-Engine, 5 tham chiếu ngược của nhóm `evolution`
+nằm gọn trong **một hàm** — chuyển hàm đó đi là xong.
+
+**Nhớ mở rộng vùng ghi của cổng** sang `<crate>/*/tests/`, nếu không agent không
+thêm được test cho crate mới tách.
+
 **Trong lúc chưa tách:** giả thuyết mà fuzz định kiểm vẫn kiểm được bằng tay. Viết
 một test thăm dò in ra hành vi ở biên (`NaN`, `±inf`, giá trị cực lớn) rồi đọc
 kết quả. Cách này tìm ra F-006 trên Anima-Engine — `NaN` bị nuốt vào ô (0,0) im

@@ -33,7 +33,7 @@ Chất lượng = sức mạnh verifier × k (số lần thử) ÷ độ dài ho
 | runner headless | ⚠️ `agy -p` chỉ một lượt, không lặp được. `claude -p` thì lặp được. |
 | module `dataflow` | ✅ chạy thật trên `cargo-modules`, 5 đường từ chối đã kiểm |
 | module `perf` | ✅ chạy thật, cổng tự revert khi tối ưu không thắng |
-| module `fuzz` | ⚠️ **bị chặn** trên crate Tauri — xem TRAPS. Miri cùng nguyên nhân. |
+| module `fuzz` | ✅ chạy thật sau khi tách crate thuần — 191M lượt / 91 giây |
 
 Ba lượt agent thật, ba hành vi khác nhau — cùng model, cùng prompt:
 
