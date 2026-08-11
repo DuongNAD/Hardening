@@ -10,6 +10,30 @@ trình để **phán**.* Model không bao giờ được tự chứng nhận cô
 Chất lượng = sức mạnh verifier × k (số lần thử) ÷ độ dài horizon
 ```
 
+## Tài liệu
+
+| Đọc khi | File |
+|---|---|
+| vận hành hằng ngày, số đo thật, cách đọc kết quả | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
+| **có gì đó hỏng** — tra theo triệu chứng | [docs/TRAPS.md](docs/TRAPS.md) |
+| kế hoạch triển khai từng phase | [PLAN.md](PLAN.md) |
+| nhật ký triển khai thật, nguồn của mọi con số | [docs/CASE-ANIMA.md](docs/CASE-ANIMA.md) |
+| prompt dán thẳng vào Antigravity | [prompts/](prompts) |
+
+## Trạng thái
+
+| Phần | |
+|---|---|
+| cổng verify (8 luật, Rust + Python) | ✅ test đủ đường từ chối |
+| cài đặt, dò layout | ✅ đúng trên Anima-Engine, LIVA, Genius |
+| MCP server trong Antigravity | ✅ chạy đúng môi trường thật |
+| module `determinism` | ✅ đã dùng thật, tìm ra 1 bug |
+| module `mutation` | ✅ lượt quét đầu 91% — nhưng **chưa agent nào đi trọn một lượt** |
+| module `fuzz` / `perf` / `dataflow` | ⚠️ có script, chưa chạy trên repo thật |
+
+Dòng áp chót là cảnh báo quan trọng nhất: cả bộ khung này tồn tại để một agent
+nhận mutant → viết test → qua cổng. Việc đó chưa xảy ra lần nào.
+
 ---
 
 ## 1. Ba thành phần
