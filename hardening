@@ -255,8 +255,10 @@ EOF
 
 # --- hardening kit ---
 logs/
-mutants.out/
-mutants.verify/
+# mutants.out* — cargo-mutants doi ten thu muc cu thanh mutants.out.old, nen
+# chan moi mot 'mutants.out/' la sot.
+mutants.out*
+mutants.verify*
 .mutmut-cache
 # .hardening.env KHONG phai secret — no la config layout, moi script deu source
 # no. Quy tac '*.env' cua nhieu repo nuot mat file nay, nen phai go ra tuong minh.
