@@ -1,16 +1,28 @@
 
 # ---------- mutation ----------
-hunt path="":
-    -python3 -m mutmut run --paths-to-mutate "${HD_SRC}{{path}}"
+# mutmut 3.x, KHÔNG phải 2.x. Ba khác biệt đủ làm hỏng mọi script viết theo 2.x:
+#   - lệnh `result-ids` đã BỊ BỎ; dùng `results` rồi lọc dòng ': survived'
+#   - `--paths-to-mutate` thay bằng `source_paths` trong setup.cfg [mutmut]
+#   - cache nằm ở thư mục `mutants/`, phải gitignore
+# Tên mutant có dạng: <module>.x_<hàm>__mutmut_<N>
+hunt name="":
+    -mutmut run {{name}}
 
+# Danh sách task. Mỗi dòng = MỘT task cho MỘT agent.
 list-missed:
-    @python3 -m mutmut result-ids survived 2>/dev/null || echo "chua co ket qua — chay 'just hunt' truoc"
+    @mutmut results 2>/dev/null | grep ': survived' | sed 's/: survived//' | tr -d ' ' || echo "chua co ket qua — chay 'just hunt' truoc"
 
-show id:
-    python3 -m mutmut show {{id}}
+# Xem mutant đó đổi gì.
+show name:
+    mutmut show {{name}}
 
 tasks n="5":
     @./scripts/tasks.sh {{n}}
 
 mutation-score:
-    @python3 -m mutmut results 2>/dev/null | tail -20
+    @s=$(mutmut results 2>/dev/null | grep -c ': survived' || echo 0); \
+     t=$(ls mutants/*/ 2>/dev/null | grep -c '' || echo 0); \
+     echo "survived=$s"; [ "$t" -gt 0 ] && echo "tong=$t" || true
+
+skip name reason:
+    @./scripts/skip.sh "{{name}}" "{{reason}}"

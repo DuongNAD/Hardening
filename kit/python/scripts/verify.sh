@@ -66,11 +66,25 @@ for i in 1 2 3; do
 done
 
 # --- Luật 8: mutant phải chết ---
+# mutmut 3.x: lenh `result-ids` da bi bo. Dung `results` roi loc ': survived'.
 if [ -n "$TARGET" ]; then
-  python3 -m mutmut run --paths-to-mutate "$HD_SRC" 2>/dev/null || true
-  if python3 -m mutmut result-ids survived 2>/dev/null | tr ' ' '\n' | grep -qx "$TARGET"; then
-    reject "mutant $TARGET van song sau khi them test"
-  fi
+  # B1 — chay rieng mutant do. PHAI chay TRUOC moi phep kiem: chinh `run` la
+  # thu sinh ra catalog trong thu muc mutants/, va `show` doc tu catalog do.
+  # `|| true` BAT BUOC: script chay voi `set -e` + `pipefail`, nen mutmut tra ma
+  # loi se giet script NGAY TAI DAY, truoc khi toi duoc cau tu choi co giai thich.
+  # Nguoi dung chi thay exit 1 cam lang, khong biet vi sao.
+  mutmut run "$TARGET" 2>&1 | tail -2 || true
+
+  # B2 — mutant PHAI ton tai. Khong kiem thi go sai ten se cho qua mien phi,
+  # dung lo FALSE PASS nhu ban Rust. `mutmut show` nem FileNotFoundError khi ten
+  # khong co trong catalog.
+  mutmut show "$TARGET" >/dev/null 2>&1 \
+    || reject "KHONG tim thay mutant '$TARGET'. Dan lai NGUYEN dong tu 'just list-missed'. Cong khong the ket luan gi."
+
+  # B3 — `mutmut results` CHI liet ke mutant con SONG; mutant chet khong xuat
+  # hien. Nen phep kiem la: khong duoc co mat trong danh sach survived.
+  mutmut results 2>/dev/null | grep -F "$TARGET" | grep -q ': survived' \
+    && reject "mutant van song sau khi them test"
 fi
 
 echo "QUA CONG"

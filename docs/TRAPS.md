@@ -267,6 +267,53 @@ vòng tiến hoá phải sống suốt đời thread, không tạo lại mỗi e
 
 ---
 
+## mutmut (Python)
+
+### Mọi lệnh mutmut trong script đều lỗi
+
+Kit ban đầu viết theo **mutmut 2.x**; bản 3.x đổi API và không tương thích ngược:
+
+| 2.x | 3.x |
+|---|---|
+| `mutmut result-ids survived` | **đã bỏ** — dùng `mutmut results` rồi lọc `': survived'` |
+| `--paths-to-mutate <dir>` | `source_paths` trong `setup.cfg` mục `[mutmut]` |
+| cache `.mutmut-cache` | thư mục `mutants/` — nhớ gitignore |
+
+Tên mutant có dạng `<module>.x_<hàm>__mutmut_<N>`.
+
+**Bẫy riêng:** `mutmut results` **chỉ liệt kê mutant còn SỐNG**. Mutant chết
+không xuất hiện — nên không dùng nó để kiểm "mutant có tồn tại không". Muốn kiểm
+tồn tại thì dùng `mutmut show <tên>`, nó ném `FileNotFoundError` khi tên sai.
+
+Và `show` đọc từ catalog do `run` sinh ra, nên thứ tự bắt buộc là **`run` trước,
+`show` sau**.
+
+---
+
+### Cổng thoát im lặng, exit 1 mà không nói lý do
+
+Chạy `verify` thấy exit 1 nhưng không có dòng `TU CHOI` nào.
+
+**Nguyên nhân:** script mở `set -e` cùng `set -o pipefail`. Khi `mutmut` hoặc
+`cargo mutants` trả mã khác 0 — mà đó **chính là trường hợp mutant còn sống** —
+shell giết script ngay tại dòng đó, trước khi tới câu từ chối có giải thích.
+
+Nghĩa là đường quan trọng nhất của cổng lại là đường im lặng nhất.
+
+**Sửa:** `|| true` sau pipeline, hoặc `set +e` bao quanh rồi đọc `$?`:
+
+```bash
+set +e
+OUT=$( cargo mutants ... 2>&1 )
+RC=$?
+set -e
+```
+
+**Lỗi này chỉ lộ ra khi test đường THẤT BẠI.** Test đường thành công thì mọi thứ
+trông hoàn hảo — mutant chết, exit 0, không ai chạm tới nhánh chết người.
+
+---
+
 ## Antigravity CLI (`agy`)
 
 Bốn thứ phải đúng cùng lúc thì `agy` mới chạy. Sai cái nào cũng cho lỗi khó đoán.
