@@ -14,8 +14,8 @@ test:
     cd "$HD_CRATE" && cargo test --release
 
 # CỔNG DUY NHẤT. Không thấy "QUA CONG" nghĩa là chưa xong.
-verify mutant="":
-    ./scripts/verify.sh "{{mutant}}"
+verify mutant="" sub="":
+    ./scripts/verify.sh "{{mutant}}" "{{sub}}"
 
 clippy:
     cd "$HD_CRATE" && cargo clippy --all-targets -- -W clippy::pedantic
