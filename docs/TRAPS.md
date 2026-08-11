@@ -19,7 +19,7 @@ Cái chung của gần hết danh sách: **lỗi không báo là lỗi.** Nó b�
 dòng lệnh **đè lên** `minimum_test_timeout` trong `.cargo/mutants.toml` — hai chỗ
 cấu hình đánh nhau, dòng lệnh thắng.
 
-**Sửa:** đừng truyền `--timeout` trên dòng lệnh. Để `mutants.toml` quyết:
+**Sửa:** đừng truyền `--timeout` cho `hunt`. Để `mutants.toml` quyết:
 
 ```toml
 timeout_multiplier = 6.0
@@ -28,6 +28,34 @@ minimum_test_timeout = 180
 
 Đo thời gian suite chạy một mình trước (`time just test`); `minimum_test_timeout`
 phải lớn hơn con số đó **nhiều lần**, vì dưới song song nó chậm đi mấy lần.
+
+---
+
+### `TU CHOI: mutant van song` nhưng thật ra là TIMEOUT
+
+Cổng báo mutant còn sống. Đọc kỹ output mới thấy:
+
+```
+WARN An explicit test timeout is recommended when using --baseline=skip;
+     using 300 seconds by default
+TIMEOUT  ... 130s build + 300s test
+```
+
+**Nguyên nhân:** ngược hẳn với mục trên, và đây là chỗ dễ đánh đồng nhất.
+`verify` chạy với `--baseline skip` nên cargo-mutants **không có baseline để tự
+tính timeout** — nó rơi về mặc định 300s. Suite mất 89s chạy đơn và tới 263s khi
+tranh CPU, nên 300s là quá sát.
+
+| Lệnh | `--baseline` | `--timeout` |
+|---|---|---|
+| `hunt` | chạy | **không truyền** — để mutants.toml tính |
+| `verify` | skip | **bắt buộc truyền** — không có gì để tính |
+
+**Sửa:** `verify` truyền `--timeout 900` (chỉnh qua `VERIFY_TIMEOUT`).
+
+**Vì sao đây là lỗi tệ nhất trong cả hệ thống:** cổng sai theo hướng **bi quan**.
+Agent sẽ viết thêm test cho một mutant vốn đã chết, lặp đủ 3 lần rồi báo thất
+bại — đốt quota vào việc không tồn tại, mà log nhìn qua thì hoàn toàn hợp lý.
 
 ---
 
