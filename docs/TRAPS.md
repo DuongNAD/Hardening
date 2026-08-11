@@ -203,6 +203,29 @@ ngoài việc chất lượng test tệ dần.
 
 ---
 
+### Khung đo k=5: `git diff` mất file mới, `git clean` không xoá file trong index
+
+Chạy k=5 (5 agent tuần tự), diff mỗi agent lưu bằng `git diff`. Agent 4 và 5
+tạo file test **mới** → `git diff` trả rỗng cho file đó → diff thiếu.
+
+Thêm `git add --intent-to-add` trước `git diff` sửa được vấn đề đầu. Nhưng tạo
+vấn đề thứ hai: `git clean -fd` **không xoá file đã có trong index**. Khi chạy
+agent tiếp theo, file cũ của agent trước còn sót lại — nếu hai agent ghi cùng
+tên file thì diff bị trộn.
+
+**Sửa:** thêm `git reset -q` (unstage) **trước** `git clean`:
+
+```bash
+git reset -q
+git checkout -q -- .
+git clean -qfd src-tauri/anima-core/tests
+```
+
+Đây là hệ quả phụ của chính bản vá `git add --intent-to-add` trong cổng verify.
+Cổng đúng, nhưng khung đo phải biết cổng đã đổi trạng thái index.
+
+---
+
 ### Luật "cấm xoá assertion" không bắt được gì
 
 **Nguyên nhân:** regex `^-\s*assert` chỉ khớp assertion đứng riêng một dòng. Sửa

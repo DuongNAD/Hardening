@@ -200,12 +200,44 @@ cả ba đều đáng thành luật:
 test tốt. Phép đo chất lượng thật là quét lại sau khi giết và đếm mutant anh em
 còn sống — không phải đếm số task đã đóng.
 
+## k = 5 — năm agent cùng mutant crossover `&&` → `||`
+
+Mutant `crossover.rs:110:76` là ca khó: xoá cạnh subtree dùng `&&`, đổi thành
+`||` để lại cạnh treo. Giết được, nhưng phải dựng genotype dạng DAG hội tụ —
+tất cả test cũ đều dùng cây chuỗi nên không phân biệt được.
+
+5 agent Claude Opus 4.6, cùng prompt, độc lập hoàn toàn:
+
+| Agent | Thời gian | Diff | File | Cổng | Anh em sống |
+|---|---|---|---|---|---|
+| 1 | 381s | 76 dòng | `map_elites_tests.rs` (sửa) | ✅ | 5 |
+| 2 | 301s | 62 dòng | `map_elites_tests.rs` (sửa) | ✅ | 5 |
+| 3 | 292s | 61 dòng | `evolution_robustness_tests.rs` (sửa) | ✅ | 5 |
+| 4 | 208s | 93 dòng | `crossover_edge_pruning.rs` (**mới**) | ✅ | 6 |
+| 5 | 212s | 127 dòng | `crossover_edge_pruning.rs` (**mới**) | ✅ | 5 |
+
+**5/5 qua cổng** — không ai gian lận, tất cả đều hiểu đúng cơ chế (cần DAG kim
+cương). Nhưng diversity cực thấp: 5 chiến lược gần y hệt. k=5 cho ra **1 lời
+giải**, không phải 5.
+
+Diff nhỏ nhất (Agent 3, 61 dòng) giết nhiều mutant anh em bằng lời giải lớn
+nhất (Agent 5, 127 dòng, 6 test). Agent 4 (93 dòng, 3 test) lại **để sống nhiều
+hơn** (6 thay vì 5) — thêm test không đồng nghĩa test tốt hơn.
+
+5 mutant sống sót qua cả 5 agent — tất cả nằm ở nhánh `non_roots.is_empty()`
+(fallback) mà prompt không nhắc tới.
+
+Bẫy hạ tầng: `run.sh` dùng `git diff` lưu diff, mà `git diff` không thấy file
+untracked. Agent 4, 5 tạo file **mới** → diff bị mất. Đã sửa bằng
+`git add --intent-to-add` trước khi diff, giống cổng verify.
+
 ## Còn nợ
 
 | | |
 |---|---|
 | F-002 | 23 chỗ `World::new()` tự lắp resource riêng; thêm resource nào cũng panic **lúc chạy**, không phải lúc build. Cần một `test_world()` dùng chung. |
 | ~~vòng lặp agent~~ | ✅ đã chứng minh — xem mục trên |
+| ~~k = 5~~ | ✅ 5/5 qua cổng, diversity thấp, diff nhỏ nhất = tốt nhất |
 | `fuzz` | chưa có fuzz target nào |
 | `perf` | chưa có benchmark nào |
 | `dataflow` | oracle test riêng thì đạt, chưa chạy trên repo thật |

@@ -14,6 +14,7 @@
 > | 3 fuzz + miri | ✅ sau khi tách `anima-core` — trước đó **cả hai đều bị chặn** |
 > | 4 dataflow | ✅ tìm ra 3 cặp phụ thuộc vòng |
 > | 5 perf | ✅ cổng tự revert khi tối ưu không thắng |
+> | k = 5 | ✅ 5/5 qua cổng, diversity thấp — diff nhỏ nhất = tốt nhất |
 >
 > **Bốn chỗ kế hoạch gốc sai, đã sửa theo số đo thật:**
 >
