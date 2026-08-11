@@ -59,6 +59,42 @@ bại — đốt quota vào việc không tồn tại, mà log nhìn qua thì ho
 
 ---
 
+### Quét mutation chậm khủng khiếp, phần lớn thời gian là build
+
+24 mutant mất 55 phút. Quét lại chỉ 2 mutant vẫn mất 39 phút, trong đó phần test
+chỉ 12 phút.
+
+**Nguyên nhân:** `--copy-target` mặc định **false**. Log nói thẳng:
+
+```
+Copied source tree total_bytes=1404973 total_files=147 reflink_used=true
+```
+
+Chỉ chép 1,4 MB source — `target/` không được chép, nên **mỗi cây tạm build lại
+toàn bộ dependency từ số 0**, và điều đó lặp lại mỗi lượt quét, mỗi worker. Với
+tauri + wgpu + burn thì đó là gần như toàn bộ thời gian.
+
+**Sửa:** `--copy-target true`. Build từ "toàn bộ dep" xuống **5–87 giây**.
+
+Trên APFS bản chép dùng reflink (copy-on-write) nên 13 GB `target/` gần như
+không tốn byte đĩa nào — đo được đĩa trống còn **tăng** sau khi bật, vì cây tạm
+cũ được dọn.
+
+Sau khi vá, nút thắt chuyển sang phase **test** (575s/mutant so với 89s chạy
+đơn). Lúc đó mới đáng nghĩ tới thu hẹp tập test binary.
+
+---
+
+### `just hunt-file 'src/x/*.rs'` in ra usage rồi thoát
+
+**Nguyên nhân:** thiếu nháy quanh `{{file}}` trong recipe → shell bung glob thành
+nhiều đường dẫn, mà `--file` chỉ nhận một giá trị.
+
+**Sửa:** `--file "{{file}}"` trong justfile, và **luôn đặt glob trong nháy** khi
+gọi: `just hunt-file 'src/evolution/*.rs'`.
+
+---
+
 ### CPU đỏ rực, load average gấp 5 lần số core
 
 `-j 4` mà load lên 49 trên máy 10 core.

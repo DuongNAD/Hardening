@@ -11,7 +11,9 @@ Số trong tài liệu này **đo thật** trên Anima-Engine, máy Apple M5 (4 
 |---|---|
 | suite chạy một mình | **89 giây** (180 test) |
 | suite dưới `-j 4` (tranh CPU) | **263 giây** |
-| một mutant, hết vòng build + test | **~2,3 phút** wall |
+| build một mutant (có `--copy-target`) | **5–87 giây** |
+| build một mutant (không có) | build lại **toàn bộ** dependency |
+| test một mutant (4 worker tranh CPU) | **575 giây** |
 | quét `map_elites.rs` (24 mutant) | **55 phút** |
 | toàn crate | **2.006 mutant** |
 | đĩa cho cây build tạm | **6 GB × số job** |
@@ -33,14 +35,17 @@ chạy tiếp — gần như chắc chắn có cấu hình sai, không phải m�
 just hunt-file src/<module>.rs
 ```
 
+Glob thì **nhớ nháy**: `just hunt-file 'src/evolution/*.rs'`.
+
 Quét một file mất vài phút tới một giờ tuỳ kích thước. `--iterate` đã bật nên
 mutant đã chết ở lượt trước được bỏ qua — **lượt sau luôn rẻ hơn lượt trước**.
 
 ```bash
-just list-missed
+just tasks 5
 ```
 
-Mỗi dòng là **một** task cho **một** agent. Không bao giờ gộp.
+In ra 5 prompt hoàn chỉnh, dán thẳng cho agent. Mỗi prompt **một** agent, không
+bao giờ gộp. Muốn xem danh sách thô thì `just list-missed`.
 
 ```bash
 just mutation-score
