@@ -35,6 +35,11 @@ Chất lượng = sức mạnh verifier × k (số lần thử) ÷ độ dài ho
 | module `perf` | ✅ chạy thật, cổng tự revert khi tối ưu không thắng |
 | module `fuzz` | ✅ chạy thật sau khi tách crate thuần — 191M lượt / 91 giây |
 
+**Đo được sau hai ngày trên Anima-Engine:** 9 mục trong `FINDINGS.md` (2 BUG
+thật, 4 SMELL, 3 TEST-GAP), `map_elites.rs` đạt 100% mutation score,
+`anima-core` từ 59% lên 70%, và ba năng lực trước đây không dùng được —
+`cargo fuzz`, `cargo miri`, mutation nhanh 150 lần — đều đã mở khoá.
+
 Ba lượt agent thật, ba hành vi khác nhau — cùng model, cùng prompt:
 
 1. nhận ra mutant không giết được, dừng, ghi `FINDINGS.md` — **trung thực**

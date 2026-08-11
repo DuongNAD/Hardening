@@ -27,6 +27,29 @@ chạy tiếp — gần như chắc chắn có cấu hình sai, không phải m�
 
 ---
 
+## Trước hết: quét crate THUẦN, không quét crate ứng dụng
+
+Nếu repo có crate logic thuần tách khỏi vỏ ứng dụng (Tauri, web server, CLI), thì
+quét crate đó trước. Số đo trên cùng một tập mutant:
+
+| | thời gian |
+|---|---|
+| crate ứng dụng (24 mutant) | **55 phút** |
+| crate thuần (135 mutant) | **2 phút** |
+
+Chênh nhau khoảng 150 lần, vì crate thuần không phải build lại tauri/wgpu/burn
+cho mỗi mutant. Chưa tách thì đọc mục "Agent bị chặn" trong TRAPS — việc tách
+thường nhỏ hơn tưởng, và nó mở khoá cả `fuzz` lẫn `miri`.
+
+```bash
+just hunt-file 'src/*.rs' 2 "" anima-core
+just list-missed anima-core
+just mutation-score anima-core
+just verify "<dòng mutant>" anima-core
+```
+
+Tham số cuối là tên crate con. Bỏ trống = crate chính.
+
 ## Vòng lặp hằng ngày
 
 ### 1. Sinh task (CPU làm, 0 token)
@@ -74,7 +97,21 @@ just verify "src/evolution/map_elites.rs:43:35: replace > with >= in MapElitesAr
 Chỉ có `QUA CONG` mới là xong. Cổng tự chạy `cargo mutants --re` để xác nhận
 mutant thật sự chết — không tin lời khai của agent, kể cả của chính anh.
 
-### 4. Ghi bug thật
+### 4. Phân loại mutant sống TRƯỚC khi viết test
+
+Không phải mutant sống nào cũng giết được. Đo trên `anima-core`: **10 trong 46**
+là equivalent thật sự — `x + rng.gen_range(-a..a)` đổi thành `-` cho cùng một
+phân phối vì khoảng lấy mẫu đối xứng quanh 0.
+
+Trần thực tế **không phải 100%**. Gặp mutant không giết được thì:
+
+```bash
+just skip "<regex>" "<vì sao mọi giá trị thay thế đều cho hành vi y hệt>" anima-core
+```
+
+Lý do dưới 30 ký tự bị từ chối. "Khó test" **không phải** equivalent.
+
+### 5. Ghi bug thật
 
 Mutant sống sót thường không phải "thiếu test", mà là **hành vi chưa ai quyết
 định**. Nếu trong lúc viết test anh phát hiện code sai thật, ghi vào
@@ -136,7 +173,11 @@ Không có nguyên nhân thứ ba.
 
 - Sau một tuần mà `FINDINGS.md` vẫn rỗng → verifier chọn sai mục tiêu. Đổi mục
   tiêu, đừng đổ thêm token.
-- Tổng `scripts/` vượt 200 dòng → đang xây nhầm thứ.
+- `scripts/` phình mà **không** truy được về một nhu cầu đo được → đang xây nhầm.
+  Ngưỡng 200 dòng trong kế hoạch gốc tính cho kit 3 module; hiện là 5 module,
+  273 dòng, tức ~55 dòng/module. Cách đọc đúng của ngưỡng này không phải con số
+  tuyệt đối mà là câu hỏi: **mỗi dòng thêm vào có chỉ ra được lần hỏng nào không?**
+  Không chỉ ra được thì cắt.
 - Anh dành hơn 1 giờ/ngày đọc output agent → cổng chưa đủ chặt.
 - Mutation score tăng mà không bug nào lộ ra → đang farm metric, không phải
   hardening.

@@ -1,5 +1,30 @@
 # Kế hoạch triển khai — Hardening Kit trên Antigravity
 
+> **Cập nhật 11/08/2026 — kế hoạch này đã chạy thật, không còn là dự định.**
+> Kết quả và mọi số đo nằm ở [docs/CASE-ANIMA.md](docs/CASE-ANIMA.md).
+> Vận hành hằng ngày: [docs/RUNBOOK.md](docs/RUNBOOK.md).
+> Gặp trục trặc: [docs/TRAPS.md](docs/TRAPS.md) — tra theo triệu chứng.
+>
+> | Phase | Trạng thái |
+> |---|---|
+> | −1 dọn đường | ✅ 103 file dở dang đã commit, `.gitignore` đã sửa |
+> | 0 determinism | ✅ 0 `thread_rng`, golden hash ghim cứng, flaky 20/20 |
+> | 1 bật mutation | ✅ `map_elites.rs` **100%** |
+> | 2 vòng lặp agent | ✅ Agent Manager đi trọn vòng và qua cổng thật |
+> | 3 fuzz + miri | ✅ sau khi tách `anima-core` — trước đó **cả hai đều bị chặn** |
+> | 4 dataflow | ✅ tìm ra 3 cặp phụ thuộc vòng |
+> | 5 perf | ✅ cổng tự revert khi tối ưu không thắng |
+>
+> **Bốn chỗ kế hoạch gốc sai, đã sửa theo số đo thật:**
+>
+> 1. `k = 5` shard song song trên một máy → **tệ hơn** chạy tuần tự
+> 2. chi phí sweep tính theo i5-14600KF → máy thật là M5, và `--copy-target`
+>    mới là biến quyết định, không phải số core
+> 3. Miri "đáng giá nếu có unsafe quanh wgpu" → Miri **không chạy được** trên
+>    crate dính FFI; phải tách crate thuần trước
+> 4. ngưỡng "hạ tầng ≤ 200 dòng" → tính cho kit 3 module; 5 module là 273 dòng,
+>    và câu hỏi đúng không phải con số mà là *mỗi dòng có chỉ ra được lần hỏng nào*
+
 Bản này giả định base đã dựng xong (nó đã xong: xem [README.md](README.md)).
 Phần còn lại là **chạy**, và chạy đúng thứ tự.
 
