@@ -32,6 +32,10 @@ hunt-file file jobs="4":
 list-missed:
     @cat "$HD_CRATE/mutants.out/missed.txt" 2>/dev/null || echo "chua co missed.txt — chay 'just hunt' truoc"
 
+# In prompt dán thẳng cho agent, mỗi mutant một cái.
+tasks n="5":
+    @./scripts/tasks.sh {{n}}
+
 mutation-score:
     @cd "$HD_CRATE" && c=$(grep -c . mutants.out/caught.txt 2>/dev/null || echo 0); \
      m=$(grep -c . mutants.out/missed.txt 2>/dev/null || echo 0); \

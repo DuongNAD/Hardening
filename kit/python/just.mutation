@@ -9,5 +9,8 @@ list-missed:
 show id:
     python3 -m mutmut show {{id}}
 
+tasks n="5":
+    @./scripts/tasks.sh {{n}}
+
 mutation-score:
     @python3 -m mutmut results 2>/dev/null | tail -20
