@@ -94,6 +94,42 @@ mỗi lượt test 486s thay vì 89s.
 
 ---
 
+## Đêm 11/08 — hai mutant đầu tiên bị giết
+
+Cả hai đều là **logic xử lý hoà** (`>` đổi thành `>=`):
+
+| | |
+|---|---|
+| `add_individual:43` | hoà fitness thì giữ cá thể cũ hay thay cá thể mới |
+| `select_parent:73` | tournament hoà thì giữ ứng viên bốc trước hay bốc sau |
+
+Ghi thành F-003, loại `TEST-GAP`: không phải code sai, mà là **hành vi chưa ai
+quyết định** — chỉ là mặc định của lần gõ đầu. Nay đã khoá bằng test.
+
+Bài học đưa vào `mutant-killer/SKILL.md`:
+
+1. Toán tử so sánh thường có **hai** thứ quan sát được (giá trị trả về + trạng
+   thái bị đổi). Khoá một cái thì mutant vẫn sống.
+2. Test phụ thuộc RNG thì **tự lật toán tử trong src, chạy, lật lại** — 1 phút,
+   thay vì một lượt `verify` 6 phút để biết test có phân biệt được không.
+3. `TU CHOI: mutant van song` có thể là **TIMEOUT**, không phải lỗi test.
+
+`map_elites.rs` nay **100%**. Toàn crate 182 test pass.
+
+## Chi phí: ba lần sửa, đo được từng lần
+
+| Vấn đề | Trước | Sau |
+|---|---|---|
+| `--timeout 120` giết baseline | lượt quét hỏng sạch | timeout tự tính 1576s |
+| `-j N` = N × ncpu | load 49 | `CARGO_BUILD_JOBS = ncpu/jobs` |
+| `--copy-target` mặc định false | build lại **toàn bộ** dep mỗi lượt | build **5–87 giây** |
+
+Cái thứ ba lớn nhất: quét 2 mutant từng mất **38m52s**, trong đó phần test chỉ
+12 phút — 27 phút còn lại là build dependency từ số 0, lặp lại mỗi worker.
+
+Sau ba lần sửa, nút thắt chuyển sang phase **test** (575s/mutant so với 89s chạy
+đơn). Đó là lúc `tests=""` trong `hunt-file` mới đáng dùng.
+
 ## Về việc dùng agent
 
 Thử `agy` (Antigravity CLI) cho phần sửa `src/`. Sáu cấu hình, đều không xong.

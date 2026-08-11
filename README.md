@@ -28,7 +28,8 @@ Chất lượng = sức mạnh verifier × k (số lần thử) ÷ độ dài ho
 | cài đặt, dò layout | ✅ đúng trên Anima-Engine, LIVA, Genius |
 | MCP server trong Antigravity | ✅ chạy đúng môi trường thật |
 | module `determinism` | ✅ đã dùng thật, tìm ra 1 bug |
-| module `mutation` | ✅ lượt quét đầu 91% — nhưng **chưa agent nào đi trọn một lượt** |
+| module `mutation` | ✅ `map_elites.rs` **100%**, 2 mutant đã giết và qua cổng thật |
+| vòng lặp agent tự động | ⚠️ **chưa agent nào đi trọn một lượt** — mới làm tay |
 | module `fuzz` / `perf` / `dataflow` | ⚠️ có script, chưa chạy trên repo thật |
 
 Dòng áp chót là cảnh báo quan trọng nhất: cả bộ khung này tồn tại để một agent
