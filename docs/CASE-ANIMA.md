@@ -156,7 +156,7 @@ Thà thế còn hơn nó lách qua.
 | `fuzz` | chưa có fuzz target nào |
 | `perf` | chưa có benchmark nào |
 | `dataflow` | oracle test riêng thì đạt, chưa chạy trên repo thật |
-| CI | repo có remote GitHub nhưng 0 workflow |
+| CI | ✅ workflow đã viết, CHƯA push lên remote |
 
 ---
 
