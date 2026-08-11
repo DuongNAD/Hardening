@@ -39,6 +39,27 @@ Nhiều dòng = nhiều task. Không bao giờ gộp.
 - Sửa file config mutation để loại mutant thay vì giết nó
 - Báo hoàn thành khi chưa thấy `QUA CONG`
 
+## Chọn giá trị đầu vào: tránh phần tử trung hoà
+
+Mutant đổi toán tử chỉ lộ ra khi giá trị đầu vào **phân biệt được** hai toán tử.
+Chọn nhầm là test pass mà mutant vẫn sống — và nó sống **im lặng**, vì cổng chỉ
+kiểm mutant được giao chứ không kiểm các mutant anh em cùng dòng.
+
+| Toán tử bị thay | Giá trị KHÔNG được dùng | Vì sao |
+|---|---|---|
+| `*` ↔ `/` | **1.0** | `x * 1 == x / 1` |
+| `+` ↔ `-` | **0** | `x + 0 == x - 0` |
+| `*` ↔ `+` | **0 hoặc 2** | `2*2 == 2+2`, `0*x == 0+x` khi x=0 |
+| `>` ↔ `>=` | giá trị **không bao giờ bằng nhau** | phải có ca hoà mới phân biệt được |
+| `&&` ↔ `\|\|` | cả hai vế **cùng** true hoặc cùng false | phải có ca lệch |
+
+Quy tắc: dùng số **không tròn, không trung hoà** — `3.0`, `7`, `0.25`. Và với
+toán tử so sánh thì **bắt buộc** có một ca hai vế bằng nhau.
+
+Ví dụ thật: test cho `phase += 2.0 * PI * frequency * delta_time` chọn
+`frequency = 1.0` sẽ giết được `+=`→`-=` nhưng để sống `*`→`/` ở chỗ nhân với
+`frequency`, vì `× 1.0` và `÷ 1.0` cho kết quả y hệt.
+
 ## Equivalent mutant — nhận ra sớm, đừng cố giết
 
 Có loại mutant **không thể giết được**: mọi giá trị thay thế đều cho hành vi y hệt
