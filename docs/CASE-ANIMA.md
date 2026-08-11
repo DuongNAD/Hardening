@@ -179,6 +179,27 @@ viết nào tìm ra chúng**:
 Bài học: **cổng phải được thử bằng agent thật.** Tự viết test cho cổng chỉ tìm ra
 những lỗ mà mình đã nghĩ tới.
 
+## Đo chất lượng test — cổng không đảm bảo điều anh tưởng
+
+Sau khi agent giết mutant `CpgOscillator::tick` và qua cổng, quét lại cả hàm:
+
+```
+20 mutant / 24 phút / 11 chết, 9 SỐNG
+```
+
+Test qua cổng nhưng để sống 9 mutant khác trong **cùng một hàm**. Ba nguyên nhân,
+cả ba đều đáng thành luật:
+
+1. `frequency = 1.0` → `× frequency` và `÷ frequency` y hệt
+2. `tick(0.25)` → `phase = π/2` → **`sin(π/2) = 1.0`** → `× sin` và `÷ sin` y hệt.
+   Giá trị trung hoà này **sinh ra ở giữa phép tính**, không nhìn ra từ tham số.
+3. `phase = π/2` không bao giờ chạm nhánh `if phase > 2π` → **6 mutant** trong
+   nhánh cuộn pha chưa từng được chạy
+
+**Kết luận về cổng:** nó đảm bảo mutant *được giao* đã chết. Nó **không** đảm bảo
+test tốt. Phép đo chất lượng thật là quét lại sau khi giết và đếm mutant anh em
+còn sống — không phải đếm số task đã đóng.
+
 ## Còn nợ
 
 | | |

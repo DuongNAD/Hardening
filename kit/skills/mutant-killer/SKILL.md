@@ -56,9 +56,22 @@ kiểm mutant được giao chứ không kiểm các mutant anh em cùng dòng.
 Quy tắc: dùng số **không tròn, không trung hoà** — `3.0`, `7`, `0.25`. Và với
 toán tử so sánh thì **bắt buộc** có một ca hai vế bằng nhau.
 
-Ví dụ thật: test cho `phase += 2.0 * PI * frequency * delta_time` chọn
-`frequency = 1.0` sẽ giết được `+=`→`-=` nhưng để sống `*`→`/` ở chỗ nhân với
-`frequency`, vì `× 1.0` và `÷ 1.0` cho kết quả y hệt.
+**Giá trị trung hoà còn sinh ra Ở GIỮA phép tính, không chỉ ở tham số.**
+
+Ví dụ thật, đo được: test cho
+`phase += 2.0*PI*frequency*delta_time; output = amplitude * sin(phase)`
+gọi `tick(0.25)` với `frequency = 1.0`. Kết quả: giết được `+=`→`-=` nhưng để
+sống **hai** mutant, vì hai chỗ khác nhau đều rơi vào 1.0:
+
+- `× frequency` với `frequency = 1.0` → `×` và `÷` y hệt
+- `× sin(phase)` với `phase = π/2` → **`sin(π/2) = 1.0`**, lại y hệt
+
+Cái thứ hai không nhìn ra từ tham số. Phải tính nhẩm giá trị **trung gian** rồi
+hỏi: có chỗ nào thành 0 hay 1 không?
+
+**Và nhớ đi qua mọi nhánh.** Cùng test đó để sống 6 mutant ở nhánh
+`if phase > 2π { phase -= 2π }` — `tick(0.25)` cho `phase = π/2`, không bao giờ
+chạm tới. Nhánh nào test không đi qua thì mọi mutant trong đó đều sống.
 
 ## Equivalent mutant — nhận ra sớm, đừng cố giết
 
