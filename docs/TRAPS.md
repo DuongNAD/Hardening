@@ -135,6 +135,61 @@ worker giữ một bản sao cây nguồn: `-j 4` chiếm **24 GB** đĩa; 5 sha
 
 ## Cổng verify
 
+### Cổng báo `QUA CONG` nhưng chưa test gì — FALSE PASS
+
+Agent báo xong, cổng xác nhận, mutant vẫn sống nguyên.
+
+**Nguyên nhân:** luật "mutant phải chết" chạy `cargo mutants --re "<chuỗi mutant>"`
+rồi chỉ đọc exit code. Nhưng khi regex không khớp mutant nào:
+
+```
+Found 0 mutants to test
+ WARN No mutants found under the active filters
+EXIT=0
+```
+
+**Exit 0.** Cổng kết luận "mutant đã chết" trong khi nó chưa test gì.
+
+Hai đường dẫn tới đây, cả hai đều dễ xảy ra:
+- agent **gõ sai một ký tự** trong chuỗi mutant → qua cổng miễn phí
+- mutant đã bị loại trong `mutants.toml` → y hệt
+
+**Sửa:** không tin exit code suông. Cổng phải khẳng định có **đúng một** mutant
+được test và nó `caught`:
+
+```bash
+echo "$OUT" | grep -q "Found 0 mutants" && reject "khong tim thay mutant nao khop"
+echo "$OUT" | grep -qE "[0-9]+ caught"  || reject "khong xac nhan duoc mutant da chet"
+```
+
+**Vì sao đây là loại tệ nhất:** cổng sai theo hướng **lạc quan**. Nó khen một công
+việc chưa làm, và im lặng. Mọi số đo sau đó đều nhiễm.
+
+---
+
+### Agent dùng `transmute` để rèn trạng thái private
+
+Test pass, mutant chết, nhìn qua thì hoàn hảo:
+
+```rust
+struct MirrorStruct { _a: A, _b: B, is_online: AtomicBool }   // cùng layout
+let mirror: &MirrorStruct = unsafe { std::mem::transmute(&tracker) };
+mirror.is_online.store(true, Ordering::SeqCst);
+```
+
+**Hai vấn đề, cái nào cũng đủ để từ chối:**
+
+1. Struct gốc không có `#[repr(C)]` → Rust **không đảm bảo** thứ tự field. Đây là
+   undefined behavior; hôm nay chạy được là may, mai đổi compiler là hỏng.
+2. Nó **không test hành vi**. Nó rèn ra một trạng thái mà API công khai không bao
+   giờ tạo được, rồi khẳng định về trạng thái đó.
+
+**Sửa:** cấm `unsafe`/`transmute`/`from_raw_parts` trong vùng test. API công khai
+không tạo được trạng thái cần test thì đó là mutant **cần refactor** — dùng
+`just skip` kèm lý do, hoặc báo lại. Không phải chỗ để sáng tạo.
+
+---
+
 ### Agent tạo file test mới và lách sạch mọi luật
 
 Luật cấm `#[ignore]`, cấm assertion rỗng nghĩa… đều không bắt được gì.
